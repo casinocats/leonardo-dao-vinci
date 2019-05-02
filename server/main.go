@@ -18,6 +18,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/casinocats/leonardo-dao-vinci/server/dv"
 	"github.com/casinocats/leonardo-dao-vinci/server/dvtoken"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -173,15 +174,19 @@ func generateArt() {
 				fmt.Printf("could not persist lastBlock file: %v", err)
 			}
 
-			// look for transactions into our address
-			if t.To == addressString {
-				fmt.Printf("transaction to us from %s\n", t.From)
-			} else {
-				fmt.Printf("from us to %s isError %s receiptStatus %s\n", t.To, t.IsError, t.TxreceiptStatus)
-			}
+			/*
+				// look for transactions into our address
+				if t.To == addressString {
+					fmt.Printf("transaction to us from %s\n", t.From)
+				} else {
+					fmt.Printf("from us to %s isError %s receiptStatus %s\n", t.To, t.IsError, t.TxreceiptStatus)
+				}
+			*/
 		}
 
 		fmt.Printf("lastBlock %d\n", lastBlock)
+		// pay the dao
+		payTheDao()
 
 		// Calculate winners
 		imageIDs := make([]int, imageCount)
@@ -259,6 +264,7 @@ func GetTransactions(address string, startBlock uint64) (*Transactions, error) {
 
 	return trs, nil
 }
+
 func addCors(handleFunc func(w http.ResponseWriter, r *http.Request)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -365,6 +371,70 @@ func setupEth() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func payTheDao() {
+
+	totalVotes := 0
+	//count total votes and build list of users
+	users := make([]common.Address, 0)
+	for _, v := range votes {
+		totalVotes += len(v)
+		for u, _ := range v {
+			users = append(users, common.HexToAddress(u))
+		}
+	}
+	if totalVotes == 0 {
+		fmt.Println("total votes 0, not paying out")
+		return
+	}
+
+	gasPrice, err := client.SuggestGasPrice(context.Background())
+	if err != nil {
+		log.Fatalf("problem getting suggested gas price: %v", err)
+	}
+
+	auth := bind.NewKeyedTransactor(privateKey)
+	auth.Nonce = big.NewInt(int64(nonce))
+	auth.Value = big.NewInt(0)     // in wei
+	auth.GasLimit = uint64(300000) // in units
+	auth.GasPrice = gasPrice
+
+	// contract destination contractAddress
+	contractAddress := common.HexToAddress("0xD8ce6E36fa78308bd5BDC9382f6913921C808FFE")
+	instance, err := dv.NewDaoVinci(contractAddress, client)
+	if err != nil {
+		log.Fatalf("error creating new DaoVinciToken: %v", err)
+
+	}
+	b := &big.Int{}
+	b.SetUint64(lastBlock)
+	bal, err := client.BalanceAt(context.Background(), contractAddress, b)
+
+	if bal.Cmp(&big.Int{}) <= 0 {
+		fmt.Println("balance 0 not paying out")
+		return
+	}
+	fmt.Printf("Our balance: %d\n", bal.Int64())
+	togive := bal.Div(bal, big.NewInt(10)) //.Mul(9)
+	togive = bal.Mul(togive, big.NewInt(9))
+	each := bal.Div(bal, big.NewInt(int64(totalVotes)))
+
+	fmt.Printf("To Users: %d\n", each.Int64())
+
+	payouts := make([]*big.Int, len(users))
+	for i, _ := range payouts {
+		payouts[i] = each
+	}
+
+	fmt.Printf("nonce for distribute: %d\n", nonce)
+	tx, err := instance.DistributeRewards(auth, users, payouts)
+	if err != nil {
+		log.Fatalf("error Distributing rewards: %v", err)
+	}
+	nonce++
+	fmt.Printf("tx sent: %s\n", tx.Hash().Hex()) // tx sent: 0x8d490e535678e9a24360e955d75b27ad307bdfb97a1dca51d0f3035dcee3e870
+
 }
 
 // mintTokens mints a token for the provided image id and iteration and then
