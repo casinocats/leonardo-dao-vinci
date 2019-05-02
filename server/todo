@@ -1,0 +1,4 @@
+need endpoints to vote on images - done
+need loop to generate images - not done
+need to call out to nft contract to generate nft.
+need to call out to the dao to send the votes.
