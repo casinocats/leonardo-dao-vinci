@@ -3,14 +3,14 @@ import getWeb3, { getGanacheWeb3 } from "./utils/getWeb3";
 import Header from "./components/Header/index.js";
 import Footer from "./components/Footer/index.js";
 import Hero from "./components/Hero/index.js";
-import Web3Info from "./components/Web3Info/index.js";
-import CounterUI from "./components/Counter/index.js";
-import Wallet from "./components/Wallet/index.js";
 import Instructions from "./components/Instructions/index.js";
 import { Loader } from 'rimble-ui';
-import Voter from './components/Voter/Voter'
-
+import Voter from './components/Voter/Voter';
+import {apiUrl }from './constants.js';
 import styles from './App.module.scss';
+import Profile from './components/Profile/Profile.js';
+import Team from './components/Team/Team.js';
+import axios from 'axios'
 
 class App extends Component {
   state = {
@@ -31,9 +31,17 @@ class App extends Component {
     return [];
   }
 
+  getIteration = ()=>{
+    axios
+  .get(`${apiUrl}/iteration`).then((response)=>(this.setState({iteration : response.data.iteration})))
+  }
+
   componentDidMount = async () => {
     let Counter = {};
     let Wallet = {};
+
+    this.getIteration();
+
     try {
       Counter = require("./contracts/Counter.json");
       Wallet = require("./contracts/Wallet.json");
@@ -179,39 +187,14 @@ class App extends Component {
     );
   }
 
-  renderBody() {
+  renderProfile = ()=>{
     return (
-      <div className={styles.wrapper}>
-        {!this.state.web3 && this.renderLoader()}
-        {this.state.web3 && !this.state.contract && (
-          this.renderDeployCheck('counter')
-        )}
-        {this.state.web3 && this.state.contract && (
-          <div className={styles.contracts}>
-            <h1>Counter Contract is good to Go!</h1>
-            <p>Interact with your contract on the right.</p>
-            <p> You can see your account onfo on the left </p>
-            <div className={styles.widgets}>
-              <Web3Info {...this.state} />
-              <CounterUI
-                decrease={this.decreaseCount}
-                increase={this.increaseCount}
-                {...this.state} />
-            </div>
-            {this.state.balance < 0.1 && (
-              <Instructions
-                ganacheAccounts={this.state.ganacheAccounts}
-                name="metamask" accounts={this.state.accounts} />
-            )}
-            {this.state.balance >= 0.1 && (
-              <Instructions
-                ganacheAccounts={this.state.ganacheAccounts}
-                name="upgrade" accounts={this.state.accounts} />
-            )}
-          </div>
-        )}
-      </div>
-    );
+      <Profile account={this.state.accounts && this.state.accounts[0]}/>
+    )
+  }
+
+  renderTeam = () => {
+    return (<Team />)
   }
 
   renderInstructions() {
@@ -225,45 +208,10 @@ class App extends Component {
     );
   }
 
-  renderFAQ() {
-    return (
-      <div className={styles.wrapper}>
-        <Instructions
-          ganacheAccounts={this.state.ganacheAccounts}
-          name="faq" accounts={this.state.accounts} />
-      </div>
-    );
-  }
 
   renderVoter(){
-    return (<Voter />)
-  }
-
-  renderEVM() {
-    return (
-      <div className={styles.wrapper}>
-      {!this.state.web3 && this.renderLoader()}
-      {this.state.web3 && !this.state.wallet && (
-        this.renderDeployCheck('evm')
-      )}
-      {this.state.web3 && this.state.wallet && (
-        <div className={styles.contracts}>
-          <h1>Wallet Contract is good to Go!</h1>
-          <p>Interact with your contract on the right.</p>
-          <p> You can see your account onfo on the left </p>
-          <div className={styles.widgets}>
-            <Web3Info {...this.state} />
-            <Wallet
-              renounce={this.renounceOwnership}
-              {...this.state} />
-          </div>
-          <Instructions
-            ganacheAccounts={this.state.ganacheAccounts}
-            name="evm" accounts={this.state.accounts} />
-        </div>
-      )}
-      </div>
-    );
+    return (<Voter 
+              iteration={this.state.iteration} account={this.state.accounts && this.state.accounts[0]}/>)
   }
 
   render() {
@@ -272,9 +220,8 @@ class App extends Component {
         <Header />
           {this.state.route === '' && this.renderInstructions()}
           {this.state.route === 'vote' && this.renderVoter()}
-          {this.state.route === 'counter' && this.renderBody()}
-          {this.state.route === 'evm' && this.renderEVM()}
-          {this.state.route === 'faq' && this.renderFAQ()}
+          {this.state.route === 'profile' && this.renderProfile()}
+          {this.state.route === "team" && this.renderTeam()}
         <Footer />
       </div>
     );

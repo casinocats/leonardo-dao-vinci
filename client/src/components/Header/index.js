@@ -1,22 +1,19 @@
 import React from 'react';
 import styles from './header.module.scss';
 import logo from './zk_logo.svg';
+import artLogo from './../../images/art-logo.png'
+import leo from './../../images/leo-2.png';
 
 const Header = () => (
-  <div className={styles.header}>
-    <nav id="menu" className="menu">
+  <div className={styles.header} style={{backgroundColor : 'white'}}>
+    <nav id="menu" className="menu" >
       <div className={styles.brand}>
-        <a href="/" className={styles.link}> <img src={logo} alt="logo" /></a>
+        <a href="/" className={styles.link}> <img src={leo} alt="logo" /></a>
       </div>
       <ul>
-        <li><a href="/" className={styles.link}> Setup</a></li>
-        {process.env.NODE_ENV !== 'production' && (
-          <li><a href="/counter" className={styles.link}> Counter</a></li>
-        )}
-        {process.env.NODE_ENV !== 'production' && (
-          <li><a href="/evm" className={styles.link}> EVM Packages</a></li>
-        )}
-        <li><a href="/faq" className={styles.link}> FAQ</a></li>
+      <li><a style={{ color : 'black'}} href="/vote" className={styles.link}> Vote</a></li>
+      <li><a style={{ color : 'black'}} href="/profile" className={styles.link}> Profile</a></li>
+      <li><a style={{ color : 'black'}} href="/team" className={styles.link}> Team</a></li>
       </ul>
     </nav>
   </div>
